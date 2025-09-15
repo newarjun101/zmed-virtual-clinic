@@ -15,7 +15,8 @@ class JwtUtil(
 
     private val secretKey: Key = Keys.hmacShaKeyFor(secret.toByteArray())
 
-    private val accessTokenValidity = 1000 * 60 * 60L       // 1 hour
+    private val accessTokenValidity =  1000 * 60 * 60 * 24L * 7 //1000 * 60 * 60L
+    // 1 hour
     private val refreshTokenValidity = 1000 * 60 * 60 * 24L * 7 // 7 days
 
     fun generateAccessToken(email: String): String {

@@ -19,6 +19,14 @@ fun Any.toSuccessModel(message: String? = null, description: String? = null): Re
 }
 
 
+fun  Any.toPaginationEmptySuccessModel(data: Any? = null): ResponsePaginationModel {
+    return ResponsePaginationModel(
+        data = data,
+    )
+
+}
+
+
 fun <T, R> List<T>.mapTo(transform: (T) -> R): List<R> {
     return this.map(transform)
 }
