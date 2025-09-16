@@ -40,6 +40,10 @@ class JwtAuthenticationFilter(
                 if (isValid) {
                     val auth = UsernamePasswordAuthenticationToken(username, null, listOf())
                     SecurityContextHolder.getContext().authentication = auth
+                    val userId = jwtUtil.getUserId(token)
+
+                    // Put userId in request attributes (accessible anywhere later)
+                    request.setAttribute("userId", userId)
                 } else {
                     writeUnauthorizedResponse(response, "Invalid or wrong type of token")
                     return
