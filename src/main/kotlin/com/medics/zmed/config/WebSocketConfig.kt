@@ -12,12 +12,12 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 class WebSocketConfig(
     private val chatHandler: ChatWebSocketHandler,
-    private val jwtHandshakeInterceptor: JwtHandshakeInterceptor
+   // private val jwtHandshakeInterceptor: JwtHandshakeInterceptor
 ) : WebSocketConfigurer {
 
     override fun registerWebSocketHandlers(registry: WebSocketHandlerRegistry) {
         registry.addHandler(chatHandler, "/ws/chat")
-            .addInterceptors(jwtHandshakeInterceptor) // JWT validation before handshake
+         //   .addInterceptors(jwtHandshakeInterceptor) // JWT validation before handshake
             .setAllowedOrigins("*") // allow all origins
     }
 }

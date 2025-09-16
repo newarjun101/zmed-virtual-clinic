@@ -5,6 +5,7 @@ import com.medics.zmed.application.mapper.response_model_mapper.toPaginationSucc
 import com.medics.zmed.application.mapper.toChatMessageDao
 import com.medics.zmed.application.mapper.toMessageResponseModel
 import com.medics.zmed.common.exceptions.model.ResponsePaginationModel
+import com.medics.zmed.component.JwtUtil
 import com.medics.zmed.domain.model.request_model.MessageHistoryRequestModel
 import com.medics.zmed.domain.model.request_model.MessageRequestModel
 import com.medics.zmed.domain.model.response_model.ChatMessageResponseModel
@@ -14,16 +15,25 @@ import org.springframework.stereotype.Service
 
 @Service
 class ChatMessageService(
-    private val messageRepository: ChatMessageRepository
+    private val messageRepository: ChatMessageRepository,
+   private val jwtUtil: JwtUtil
 ) {
 
+    fun getMessageByChatId(requestModel: MessageHistoryRequestModel? = null,token : String?= null): ResponsePaginationModel {
 
-    fun getMessageByChatId(requestModel: MessageHistoryRequestModel? = null): ResponsePaginationModel {
-
-        if(requestModel == null)  {
-            throw IllegalArgumentException("Request body cann't be null")
+        if (token.isNullOrBlank()) {
+            throw IllegalArgumentException("Invalid access token")
         }
-        if (requestModel?.chatId == null) {
+
+        if(!jwtUtil.isTokenValid(token,false)) {
+            throw IllegalArgumentException("Invalid or expire token")
+        }
+
+        if(jwtUtil.getUserId(token) != requestModel?.userId) {
+            throw IllegalArgumentException("Invalid or expire token")
+        }
+
+        if (requestModel.chatId == null) {
             return emptyList<ChatMessageResponseModel>().toPaginationEmptySuccessModel()
         }
         val data = messageRepository.findAllChatId(chatId = requestModel.chatId, pageNumber = requestModel.pageNumber, pageSize = requestModel.pageSize)

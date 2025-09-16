@@ -7,11 +7,14 @@ import com.medics.zmed.domain.model.request_model.LoginRequestModel
 import com.medics.zmed.domain.model.request_model.RefreshTokenRequestModel
 import com.medics.zmed.domain.model.request_model.RegisterRequestModel
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val authService: AuthService
 ) {
+
 
 
     @PostMapping("/process/login")
@@ -46,11 +50,17 @@ class AuthController(
     }
 
     @GetMapping("/get-user-profile")
-    fun findById(@RequestParam id: Long? = null): ResponseEntity<ResponseModel> {
+    fun findById(@RequestParam id: Long? = null,
+                 @RequestHeader("Authorization") authHeader: String?=null): ResponseEntity<ResponseModel> {
         if (id == null) {
             throw IllegalArgumentException("Invalid request")
         }
-        val userResponse = authService.getUserById(id)
+
+        val token = authHeader?.removePrefix("Bearer ")?.trim()
+
+
+
+        val userResponse = authService.getUserById(id,token)
         if (userResponse == null) {
             throw IllegalArgumentException("Invalid id")
         }

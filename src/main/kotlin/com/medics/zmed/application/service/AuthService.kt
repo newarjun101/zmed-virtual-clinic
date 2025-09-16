@@ -10,8 +10,11 @@ import com.medics.zmed.persistance.entity.UserDao
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import com.medics.zmed.common.exceptions.customExceptions.UserNotFoundException
+import com.medics.zmed.domain.model.common_model.JwtModel
 import com.medics.zmed.domain.model.request_model.RefreshTokenRequestModel
 import com.medics.zmed.domain.model.response_model.RefreshTokenResponseModel
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import kotlin.NullPointerException
 
 @Service
@@ -41,21 +44,23 @@ class AuthService(
             throw IllegalArgumentException("Wrong password")
         }
 
-        val accessToken = jwtUtil.generateAccessToken(loginRequestModel.email)
-        val refreshToken = jwtUtil.generateRefreshToken(loginRequestModel.email)
+        val jwtModel = JwtModel(email = userDao.email, userId = userDao.id!!)
+        val refreshToken = jwtUtil.generateRefreshToken(jwtModel)
 
         val tokenRequest = refreshToken(
             refreshTokenRequestModel = RefreshTokenRequestModel(refreshToken)
         )
 
+
         if (tokenRequest?.refreshToken.isNullOrBlank() || tokenRequest.accessToken.isBlank()) {
             throw IllegalArgumentException("Something gone wrong in generation token")
         }
 
+
         return UserResponseModel.fromUserDao(
             userDao.copy(
                 accessToken = tokenRequest.accessToken,
-               refreshToken = tokenRequest.refreshToken
+                refreshToken = tokenRequest.refreshToken
             )
         )
     }
@@ -67,7 +72,6 @@ class AuthService(
             throw IllegalArgumentException("Password is too short")
         }
         if (authRepository.findByEmail(registerRequestModel.email) != null) {
-
             throw IllegalArgumentException("Email is already registered")
         }
 
@@ -76,29 +80,64 @@ class AuthService(
         if (hashedPassword.isNullOrBlank()) {
             throw IllegalArgumentException("Password encryption error")
         }
-        val accessToken = jwtUtil.generateAccessToken(registerRequestModel.email)
-        val refreshToken = jwtUtil.generateRefreshToken(registerRequestModel.email)
 
         val userDao = UserDao(
             name = registerRequestModel.name,
             email = registerRequestModel.email,
             password = hashedPassword,
-            accessToken = accessToken,
-            refreshToken = refreshToken
         )
-        val data = authRepository.onSignUp(userDao)
-        return UserResponseModel.fromUserDao(data)
+        val userSignUpDao = authRepository.onSignUp(userDao)
+
+
+
+        if (userSignUpDao.id == null) {
+            throw IllegalArgumentException("User id getting null")
+        }
+
+        val jwtModel = JwtModel(email = userSignUpDao.email, userId = userSignUpDao.id)
+        val newAccessToken = jwtUtil.generateAccessToken(jwtModel)
+        val newRefreshToken = jwtUtil.generateRefreshToken(jwtModel)
+        val update = authRepository.updateAndRefreshToken(userSignUpDao.id, newRefreshToken, newAccessToken)
+        if (update == 0 || update == null) {
+            throw UserNotFoundException("User with email not found")
+        }
+        val userResult = authRepository.findByEmail(userSignUpDao.email)
+        print("arjun user result ==> ${userResult}")
+
+        if (userResult == null) {
+            throw IllegalArgumentException("Something gone wrong")
+        }
+
+        print("arjun access token ${userResult.accessToken}")
+        return UserResponseModel.fromUserDao(
+            userResult.copy(
+                accessToken = newAccessToken, refreshToken = newRefreshToken
+            )
+        )
 
     }
 
-    fun getUserById(id: Long): UserResponseModel? {
+    fun getUserById(id: Long, token : String?=null): UserResponseModel? {
+
+        if (token.isNullOrBlank()) {
+            throw UnauthorizedException("Token cannot be null or empty")
+        }
+
+        if(!jwtUtil.isTokenValid(token,false)) {
+            throw UnauthorizedException("Invalid or token expire")
+        }
+        val jwtModel = jwtUtil.getJwtModel(token)
+
+        print("arjun jtw ==> jwt id ${jwtModel.userId} || ${id} <===")
+        if(jwtModel.userId != id ) {
+            throw UnauthorizedException("Unmatch user")
+        }
         val userDao = authRepository.findById(id)
 
-        return if (userDao != null) {
-            UserResponseModel.fromUserDao(userDao)
-        } else {
-            null
+        if(userDao?.email != jwtModel.email) {
+            throw UnauthorizedException("Unmatch email")
         }
+        return UserResponseModel.fromUserDao(userDao)
 
     }
 
@@ -115,15 +154,20 @@ class AuthService(
 
         val user = authRepository.findByEmail(email)
             ?: throw UserNotFoundException("User not found for refresh token")
-        val newAccessToken = jwtUtil.generateAccessToken(user.email)
-        val newRefreshToken = jwtUtil.generateRefreshToken(user.email)
 
-        val update = authRepository.refreshToken(email, newRefreshToken, newAccessToken)
+        val jwtModel = JwtModel(email = user.email, userId = user.id!!)
+
+        val newAccessToken = jwtUtil.generateAccessToken(jwtModel)
+        val newRefreshToken = jwtUtil.generateRefreshToken(jwtModel)
+
+        val update = authRepository.updateAndRefreshToken(user.id, newRefreshToken, newAccessToken)
         if (update == 0 || update == null) {
             throw UserNotFoundException("User with email $email not found")
         }
 
         val userDao = authRepository.findByEmail(email)
+
+
 
         if (userDao?.refreshToken.isNullOrBlank() || userDao.accessToken.isNullOrBlank()) {
             throw UserNotFoundException("Unexpected error happen in database for access token")

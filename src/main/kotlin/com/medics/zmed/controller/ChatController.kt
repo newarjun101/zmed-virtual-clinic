@@ -4,7 +4,10 @@ import com.medics.zmed.application.mapper.response_model_mapper.toSuccessModel
 import com.medics.zmed.application.service.ChatMessageService
 import com.medics.zmed.common.exceptions.model.ResponseModel
 import com.medics.zmed.common.exceptions.model.ResponsePaginationModel
+import com.medics.zmed.common.extension.getHeaderAccessToken
 import com.medics.zmed.domain.model.request_model.MessageHistoryRequestModel
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -21,8 +24,11 @@ import org.springframework.web.bind.annotation.RestController
         @PostMapping("/history")
         fun getChatHistory(
             @RequestBody body : MessageHistoryRequestModel?=null,
+            httpServlet: HttpServletRequest
         ): ResponseEntity<ResponseModel> {
-            val responseModel = chatMessageService.getMessageByChatId(body)
+
+
+            val responseModel = chatMessageService.getMessageByChatId(body, token = httpServlet.getHeaderAccessToken())
             return ResponseEntity.status(HttpStatus.OK).body(responseModel.toSuccessModel())
         }
     }

@@ -3,6 +3,8 @@ package com.medics.zmed.domain.model.request_model
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class MessageHistoryRequestModel(
+    @JsonProperty("user_id")
+    val userId : Long?=null,
     @JsonProperty("chat_id")
     val chatId : String?=null,
     @JsonProperty("page_number")

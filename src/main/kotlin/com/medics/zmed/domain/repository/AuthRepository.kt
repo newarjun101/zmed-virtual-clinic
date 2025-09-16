@@ -17,7 +17,7 @@ interface AuthRepository {
     fun isUserExit(id: Long?=null): Boolean
 
 
-    fun refreshToken(email: String,refreshToken: String,accessToken: String): Int?
+    fun updateAndRefreshToken(userId: Long, refreshToken: String, accessToken: String): Int?
 
 
 
@@ -49,9 +49,9 @@ class AuthRepositoryImpl(
         return springAuthRepository.existsById(id)
     }
 
-    override fun refreshToken(email: String,refreshToken: String,accessToken: String): Int? {
+    override fun updateAndRefreshToken(userId: Long, refreshToken: String, accessToken: String): Int? {
         return springAuthRepository.updateTokens(
-            email = email,
+            userId = userId,
             accessToken = accessToken,
             refreshToken = refreshToken
         )
@@ -65,9 +65,9 @@ interface SpringAuthRepository : JpaRepository<UserDao, Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE UserDao u SET u.accessToken = :accessToken, u.refreshToken = :refreshToken WHERE u.email = :email")
+    @Query("UPDATE UserDao u SET u.accessToken = :accessToken, u.refreshToken = :refreshToken WHERE u.id = :userId")
     fun updateTokens(
-        @Param("email") email: String,
+        @Param("userId") userId: Long,
         @Param("accessToken") accessToken: String,
         @Param("refreshToken") refreshToken: String
     ): Int
